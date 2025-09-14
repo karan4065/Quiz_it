@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import Faculty from '../models/Faculty.js';
 
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+  return jwt.sign({ id: userId }, 'divyansh', {
       expiresIn: '30d', // Token expiry (30 days)
   });
 };
@@ -28,13 +28,14 @@ export const registerFaculty = async (req, res) => {
     }
   };
 
+
 export const loginFaculty = async (req, res) => {
     const { email, password } = req.body;
 console.log(req.body)
     try {
         // Check for user
        const user = await Faculty.findOne({ email });
-
+console.log(user)
         if (user && await user.password==password) {
           user.password = undefined;
             const token = generateToken(user._id);

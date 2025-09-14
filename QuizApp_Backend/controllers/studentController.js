@@ -1,6 +1,6 @@
 import Student from '../models/Student.js';
 import jwt from 'jsonwebtoken';
-
+import Papa from 'papaparse';
 // Generate a JWT token
 const generateToken = (userId) => {
     return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -10,7 +10,7 @@ const generateToken = (userId) => {
 import bcrypt from 'bcryptjs';
 
 export const registerStudent = async (req, res) => {
-    const { name, studentId, department, year, email, phone, password } = req.body;
+    const { name, studentId, department, year, email, phone } = req.body;
 
     try {
         const studentExists = await Student.findOne({ $or: [{ email }, { studentId }] });
@@ -30,7 +30,7 @@ export const registerStudent = async (req, res) => {
             year,
             email,
             phone,
-            password
+            password:name
         });
 
         // Save the student to the database
@@ -134,27 +134,147 @@ export const getYearDeptStudents = async (req, res) => {
     }
 };
 
-export const getStudentByStudentID = async (req, res) => {
-    const { studentId } = req.params;
+// export const getStudentByStudentID = async (req, res) => {
+//     const { studentId } = req.params;
 
-    try {
-        const student = await Student.findOne({ studentId }).select('-password');
-        if (!student) {
-            return res.status(404).json({
-                success: false,
-                message: 'Student not found'
-            });
-        }
-        res.json({
-            success: true,
-            message: 'Student retrieved successfully',
-            data: student
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Server error',
-            error: error.message
-        });
+//     try {
+//         const student = await Student.findOne({ studentId }).select('-password');
+//         if (!student) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Student not found'
+//             });
+//         }
+//         res.json({
+//             success: true,
+//             message: 'Student retrieved successfully',
+//             data: student
+//         });
+//     } catch (error) {
+//         res.status(500).json({
+//             success: false,
+//             message: 'Server error',
+//             error: error.message
+//         });
+//     }
+// };
+export const uploadStudentsCSV = async (req, res) => {
+  try {
+    const { csvData } = req.body;
+
+    if (!csvData) {
+      return res.status(400).json({ success: false, message: "CSV data is required" });
     }
+
+    // Parse the CSV data
+    const parsed = Papa.parse(csvData, {
+      header: true,
+      skipEmptyLines: true, // skip empty lines automatically
+    });
+
+    if (parsed.errors.length > 0) {
+      return res.status(400).json({ success: false, message: "CSV parsing error", errors: parsed.errors });
+    }
+
+    // Filter out rows missing essential fields
+    const validStudents = parsed.data.filter(stu => stu.name && stu.studentId && stu.email && stu.password && stu.department && stu.year);
+
+    if (validStudents.length === 0) {
+      return res.status(400).json({ success: false, message: "No valid student data found" });
+    }
+
+    // Prepare student documents for insertion
+    const studentsToInsert = await Promise.all(
+      validStudents.map(async (stu) => {
+        const hashedPassword = await bcrypt.hash(stu.password, 10);
+        return {
+          name: stu.name.trim(),
+          studentId: stu.studentId.trim(),
+          department: stu.department.trim(),
+          year: Number(stu.year),
+          email: stu.email.trim(),
+          password: hashedPassword,
+          phone: stu.phone ? stu.phone.trim() : "0000000000", // default if missing
+        };
+      })
+    );
+
+    // Insert into database
+    const saved = await Student.insertMany(studentsToInsert, { ordered: false });
+
+    res.json({ success: true, message: "Students uploaded successfully", data: saved });
+
+  } catch (err) {
+    console.error("Error uploading students CSV:", err);
+
+    // Handle duplicate key errors specifically
+    if (err.code === 11000) {
+      return res.status(400).json({ success: false, message: "Duplicate entry error", error: err.keyValue });
+    }
+
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+};
+// Delete student
+// --- Update student by ID ---
+export const updateStudent = async (req, res) => {
+  try {
+    const { name, studentId, department, year, email, phone } = req.body;
+console.log(req.params)
+console.log(req.body)
+    // Find student by MongoDB _id
+    const student = await Student.findById(req.params.studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    // Update only provided fields
+    student.name = name || student.name;
+    student.studentId = studentId || student.studentId;
+    student.department = department || student.department;
+    student.year = year || student.year;
+    student.email = email || student.email;
+    student.phone = phone || student.phone;
+
+    // Update password if provided
+    // if (password) {
+    //   const salt = await bcrypt.genSalt(10);
+    //   student.password = await bcrypt.hash(password, salt);
+    // }
+
+    const updatedStudent = await student.save();
+    updatedStudent.password = undefined; // Hide password in response
+    res.json({ success: true, message: "Student updated successfully", data: updatedStudent });
+
+  } catch (err) {
+    console.error("Update error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// --- Delete student by ID ---
+export const deleteStudent = async (req, res) => {
+  try {
+    const student = await Student.findByIdAndDelete(req.params.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    res.json({ success: true, message: "Student deleted successfully" });
+
+  } catch (err) {
+    console.error("Delete error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+export const getStudentByStudentID = async (req, res) => {
+  try {
+    console.log(req.params)
+    const student = await Student.findOne({ studentId: req.params.id }).select("-password");
+    if (!student) return res.status(404).json({ success: false, message: "Student not found" });
+
+    res.json({ success: true, message: "Student fetched successfully", data: student });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };

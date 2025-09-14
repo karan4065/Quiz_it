@@ -31,11 +31,11 @@ export const registerFaculty = async (req, res) => {
 
 export const loginFaculty = async (req, res) => {
     const { email, password } = req.body;
-console.log(req.body)
+
     try {
         // Check for user
        const user = await Faculty.findOne({ email });
-console.log(user)
+
         if (user && await user.password==password) {
           user.password = undefined;
             const token = generateToken(user._id);

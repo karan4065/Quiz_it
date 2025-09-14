@@ -6,12 +6,16 @@ import ThankYou from "./pages/student/ThankYou"; // Make sure the path is correc
 import FacultyDashboard from "./pages/faculty/FacultyDashboard"; // Import your faculty dashboard
 import StudentResult from "./pages/faculty/StudentResult"; // Import the StudentResult component
 import StudentDetails from "./pages/student/StudentDetails"; // Import StudentDetails
+import StudentLogin from "./pages/StudentLogin";
+import Home from "./pages/Home";
 
 const App = () => {
     return (
         <Router>
             <Routes>
-                <Route path="/" element={<Login />} />
+                <Route path="/" element={<Home />} />
+                <Route path="/student-login" element={<StudentLogin />} />
+                <Route path="/faculty-login" element={<Login />} />
                 <Route path="/student-details" element={<StudentDetails />} /> {/* Add route for Student Details */}
                 <Route path="/quiz" element={<Quiz />} />
                 <Route path="/thank-you" element={<ThankYou />} />

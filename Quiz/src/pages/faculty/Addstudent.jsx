@@ -5,7 +5,14 @@ const AddStudent = () => {
   const [studentFile, setStudentFile] = useState(null);
   const [students, setStudents] = useState([]);
 
-  // Add form states
+  // UI toggle state
+  const [openFeature, setOpenFeature] = useState(null);
+
+  const toggleFeature = (feature) => {
+    setOpenFeature(openFeature === feature ? null : feature); // toggle open/close
+  };
+
+  // --- Your existing form states (no change) ---
   const [addStudentId, setAddStudentId] = useState("");
   const [addName, setAddName] = useState("");
   const [addDepartment, setAddDepartment] = useState("");
@@ -13,7 +20,6 @@ const AddStudent = () => {
   const [addEmail, setAddEmail] = useState("");
   const [addPhone, setAddPhone] = useState("");
 
-  // Edit form states
   const [editStudentIdInput, setEditStudentIdInput] = useState("");
   const [editingStudent, setEditingStudent] = useState(null);
   const [editStudentId, setEditStudentId] = useState("");
@@ -141,81 +147,82 @@ const AddStudent = () => {
   };
 
   return (
-    <div className="mt-4 p-4 border rounded-lg shadow-md bg-gray-50">
-      {/* Add Student */}
-      <h4 className="text-lg font-semibold mb-3">➕ Add Students</h4>
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <input type="text" placeholder="Student ID" value={addStudentId} onChange={(e) => setAddStudentId(e.target.value)} className="border p-2 rounded-md" />
-        <input type="text" placeholder="Name" value={addName} onChange={(e) => setAddName(e.target.value)} className="border p-2 rounded-md" />
-        <input type="text" placeholder="Department" value={addDepartment} onChange={(e) => setAddDepartment(e.target.value)} className="border p-2 rounded-md" />
-        <input type="text" placeholder="Year" value={addYear} onChange={(e) => setAddYear(e.target.value)} className="border p-2 rounded-md" />
-        <input type="email" placeholder="Email" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} className="border p-2 rounded-md" />
-        <input type="text" placeholder="Phone" value={addPhone} onChange={(e) => setAddPhone(e.target.value)} className="border p-2 rounded-md" />
+    <div className="mt-4 space-y-4">
+      {/* Buttons Row */}
+      <div className="flex gap-4">
+        <button
+          onClick={() => toggleFeature("add")}
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          ➕ Add Student
+        </button>
+        <button
+          onClick={() => toggleFeature("upload")}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          📂 Upload CSV 
+        </button>
+        <button
+          onClick={() => toggleFeature("update")}
+          className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+        >
+          ✏️ Update / Delete
+        </button>
       </div>
-      <button onClick={handleAddStudent} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition mb-4">Add Student</button>
+
+      {/* Add Student */}
+      {openFeature === "add" && (
+        <div className="p-5 border rounded-lg shadow bg-white">
+          <h3 className="text-lg font-semibold mb-3 text-green-600">➕ Add Student</h3>
+          <div className="space-y-2 mb-3">
+            <input type="text" placeholder="Student ID" value={addStudentId} onChange={(e) => setAddStudentId(e.target.value)} className="border p-2 rounded-md w-full" />
+            <input type="text" placeholder="Name" value={addName} onChange={(e) => setAddName(e.target.value)} className="border p-2 rounded-md w-full" />
+            <input type="text" placeholder="Department" value={addDepartment} onChange={(e) => setAddDepartment(e.target.value)} className="border p-2 rounded-md w-full" />
+            <input type="text" placeholder="Year" value={addYear} onChange={(e) => setAddYear(e.target.value)} className="border p-2 rounded-md w-full" />
+            <input type="email" placeholder="Email" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} className="border p-2 rounded-md w-full" />
+            <input type="text" placeholder="Phone" value={addPhone} onChange={(e) => setAddPhone(e.target.value)} className="border p-2 rounded-md w-full" />
+          </div>
+          <button onClick={handleAddStudent} className="bg-green-500 text-white w-full py-2 rounded hover:bg-green-600">Add</button>
+        </div>
+      )}
 
       {/* Upload CSV */}
-      <div className="mt-6">
-        <h4 className="text-md font-medium mb-2">Upload Students via CSV</h4>
-        <div className="flex items-center space-x-2">
-          <input type="file" accept=".csv" onChange={handleFileChange} className="border p-2 rounded-md" />
-          <button onClick={handleStudentUpload} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Upload CSV</button>
+      {openFeature === "upload" && (
+        <div className="p-5 border rounded-lg shadow bg-white">
+          <h3 className="text-lg font-semibold mb-3 text-blue-600">📂 Upload CSV</h3>
+          <div className="flex flex-col gap-2">
+            <input type="file" accept=".csv" onChange={handleFileChange} className="border p-2 rounded-md w-full" />
+            <button onClick={handleStudentUpload} className="bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Upload</button>
+          </div>
         </div>
-      </div>
-
-      {/* Student List */}
-      <div className="mt-6 p-4 border rounded-lg shadow-md bg-white">
-        <h4 className="text-md font-medium mb-3">📋 Student List</h4>
-        <table className="min-w-full border border-gray-300 text-sm">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border px-4 py-2">ID</th>
-              <th className="border px-4 py-2">Name</th>
-              <th className="border px-4 py-2">Dept</th>
-              <th className="border px-4 py-2">Year</th>
-              <th className="border px-4 py-2">Email</th>
-              <th className="border px-4 py-2">Phone</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((stu) => (
-              <tr key={stu._id} className="text-center">
-                <td className="border px-4 py-2">{stu.studentId}</td>
-                <td className="border px-4 py-2">{stu.name}</td>
-                <td className="border px-4 py-2">{stu.department}</td>
-                <td className="border px-4 py-2">{stu.year}</td>
-                <td className="border px-4 py-2">{stu.email}</td>
-                <td className="border px-4 py-2">{stu.phone}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
 
       {/* Update/Delete */}
-      <div className="mt-6 p-4 border rounded-lg shadow-md bg-white">
-        <h4 className="text-md font-medium mb-3">✏️ Update / Delete Student by ID</h4>
-        <div className="flex gap-2 mb-4">
-          <input type="text" placeholder="Enter Student ID" value={editStudentIdInput} onChange={(e) => setEditStudentIdInput(e.target.value)} className="border p-2 rounded-md" />
-          <button onClick={handleFetchStudent} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">Fetch</button>
-        </div>
-
-        {editingStudent && (
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <input type="text" placeholder="Student ID" value={editStudentId} onChange={(e) => setEditStudentId(e.target.value)} className="border p-2 rounded-md" />
-            <input type="text" placeholder="Name" value={editName} onChange={(e) => setEditName(e.target.value)} className="border p-2 rounded-md" />
-            <input type="text" placeholder="Department" value={editDepartment} onChange={(e) => setEditDepartment(e.target.value)} className="border p-2 rounded-md" />
-            <input type="text" placeholder="Year" value={editYear} onChange={(e) => setEditYear(e.target.value)} className="border p-2 rounded-md" />
-            <input type="email" placeholder="Email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="border p-2 rounded-md" />
-            <input type="text" placeholder="Phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="border p-2 rounded-md" />
-            <div className="col-span-2 flex gap-2 mt-2">
-              <button onClick={handleUpdateStudent} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Update</button>
-              <button onClick={handleDeleteStudent} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Delete</button>
-              <button onClick={clearEditForm} className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Cancel</button>
-            </div>
+      {openFeature === "update" && (
+        <div className="p-5 border rounded-lg shadow bg-white">
+          <h3 className="text-lg font-semibold mb-3 text-yellow-600">✏️ Update / Delete</h3>
+          <div className="flex gap-2 mb-3">
+            <input type="text" placeholder="Enter Student ID" value={editStudentIdInput} onChange={(e) => setEditStudentIdInput(e.target.value)} className="border p-2 rounded-md flex-1" />
+            <button onClick={handleFetchStudent} className="bg-blue-500 text-white px-4 rounded hover:bg-blue-600">Fetch</button>
           </div>
-        )}
-      </div>
+
+          {editingStudent && (
+            <div className="space-y-2">
+              <input type="text" placeholder="Student ID" value={editStudentId} onChange={(e) => setEditStudentId(e.target.value)} className="border p-2 rounded-md w-full" />
+              <input type="text" placeholder="Name" value={editName} onChange={(e) => setEditName(e.target.value)} className="border p-2 rounded-md w-full" />
+              <input type="text" placeholder="Department" value={editDepartment} onChange={(e) => setEditDepartment(e.target.value)} className="border p-2 rounded-md w-full" />
+              <input type="text" placeholder="Year" value={editYear} onChange={(e) => setEditYear(e.target.value)} className="border p-2 rounded-md w-full" />
+              <input type="email" placeholder="Email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="border p-2 rounded-md w-full" />
+              <input type="text" placeholder="Phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="border p-2 rounded-md w-full" />
+              <div className="flex gap-2 mt-2">
+                <button onClick={handleUpdateStudent} className="bg-yellow-500 text-white flex-1 py-2 rounded hover:bg-yellow-600">Update</button>
+                <button onClick={handleDeleteStudent} className="bg-red-500 text-white flex-1 py-2 rounded hover:bg-red-600">Delete</button>
+                <button onClick={clearEditForm} className="bg-gray-500 text-white flex-1 py-2 rounded hover:bg-gray-600">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

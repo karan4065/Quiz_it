@@ -10,19 +10,44 @@ const Quiz = () => {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [categories, setCategories] = useState([]);
   const [answers, setAnswers] = useState([]);
-  const [isProfileVisible, setIsProfileVisible] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [student, setStudent] = useState(null); // ✅ fetched student details
 
-  const { quizId } = useParams(); // ✅ get quizId from URL params
+  const { quizId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const student = location.state?.student;
 
-  // Load quiz questions
+  // ✅ Toggle Sidebar
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
+  // ✅ Logout handler
+  const handleLogout = () => {
+    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    navigate("/"); // redirect to login
+  };
+
+  // ✅ Fetch student details using cookie
+  const loadStudent = async () => {
+    try {
+      const { data } = await axios.get("http://localhost:5000/api/student/me", {
+        withCredentials: true, // send cookie
+      });
+      console.log(data)
+      if (data.success) {
+        setStudent(data.student); // backend should return { success: true, student: {...} }
+      }
+    } catch (err) {
+      console.error("Student fetch error:", err);
+      handleLogout(); // if cookie invalid → logout
+    }
+  };
+
+  // ✅ Load quiz questions
   const loadQuiz = async () => {
     try {
       const { data } = await axios.get(
         `http://localhost:5000/api/quizzes/${quizId}`,
-        { withCredentials: true } // ✅ include cookies
+        { withCredentials: true }
       );
       if (data.success) setCategories(data.data.categories || []);
     } catch (err) {
@@ -31,9 +56,8 @@ const Quiz = () => {
   };
 
   useEffect(() => {
-    if (quizId) {
-      loadQuiz();
-    }
+    if (quizId) loadQuiz();
+    loadStudent(); // ✅ fetch student on mount
   }, [quizId]);
 
   const questions = categories.flatMap((cat) => cat.questions);
@@ -45,7 +69,7 @@ const Quiz = () => {
         setTimeLeft((prev) => prev - 1);
       } else if (timeLeft === 0) {
         setQuizCompleted(true);
-        handleSubmit(); // auto submit when time is up
+        handleSubmit();
       }
     }, 1000);
     return () => clearInterval(timer);
@@ -93,23 +117,54 @@ const Quiz = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      <Navbar userName={student?.name || "Student"} />
+      {/* Navbar with toggleSidebar */}
+      <Navbar
+        userName={student?.name || "Student"}
+        onProfileClick={toggleSidebar}
+      />
 
-      {isProfileVisible && (
-        <div className="absolute top-16 left-4 bg-white text-black p-4 rounded shadow z-10">
-          <h2 className="font-bold mb-2">Student Profile</h2>
-          <p>Name: {student?.name}</p>
-          <p>ID: {student?.studentId}</p>
-          <p>Email: {student?.email}</p>
-          <p>Department: {student?.department}</p>
-          <p>Year: {student?.year}</p>
+      {/* Sidebar Drawer (👉 opens from LEFT now) */}
+      {sidebarOpen && (
+        <aside className="h-screen w-1/5 bg-[#1e254a] text-white p-6 shadow-xl flex flex-col justify-between fixed top-0 left-0 z-50">
+          <div>
+            <h2 className="text-xl font-bold mb-6 border-b pb-2 border-gray-400">
+              Student Profile
+            </h2>
+            <div className="space-y-3 text-sm bg-[#2e3561] p-4 rounded-xl shadow-inner">
+              <div>
+                <span className="font-semibold">Name:</span> {student?.name}
+              </div>
+              <div>
+                <span className="font-semibold">ID:</span> {student?.studentId}
+              </div>
+              <div>
+                <span className="font-semibold">Email:</span> {student?.email}
+              </div>
+              <div>
+                <span className="font-semibold">Department:</span>{" "}
+                {student?.department}
+              </div>
+              <div>
+                <span className="font-semibold">Year:</span> {student?.year}
+              </div>
+            </div>
+          </div>
+
           <button
-            onClick={() => setIsProfileVisible(false)}
-            className="mt-2 text-red-500"
+            onClick={handleLogout}
+            className="bg-red-500 w-full py-2 rounded-md hover:bg-red-600 transition transform hover:scale-105 text-sm font-medium"
           >
-            Close
+            Logout
           </button>
-        </div>
+        </aside>
+      )}
+
+      {/* Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 z-40"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
       )}
 
       {/* Main Quiz Section */}

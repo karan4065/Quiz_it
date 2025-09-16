@@ -2,10 +2,17 @@ import Student from '../models/Student.js';
 import jwt from 'jsonwebtoken';
 import Papa from 'papaparse';
 // Generate a JWT token
-const generateToken = (userId,quizId) => {
-    return jwt.sign({ id: userId,quizId:quizId }, process.env.JWT_SECRET, {
-        expiresIn: '30d', // Token expiry (30 days)
-    });
+const generateToken = (student) => {
+  return jwt.sign(
+    {
+      id: student._id,
+      name: student.name,
+      studentId: student.studentId,
+      department: student.department,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "30d" }
+  );
 };
 import bcrypt from 'bcryptjs';
 
@@ -54,11 +61,8 @@ export const registerStudent = async (req, res) => {
 };
 
 export const loginStudent = async (req, res) => {
-  console.log("Login request body:", req.body);
-
   const { uid, password, quizId } = req.body;
 
-  // Validate presence
   if (!uid || !password || !quizId) {
     return res.status(400).json({
       success: false,
@@ -66,19 +70,8 @@ export const loginStudent = async (req, res) => {
     });
   }
 
-  // Validate quizId is alphanumeric
-  const alphaNumRegex = /^[a-zA-Z0-9]+$/;
-  if (!alphaNumRegex.test(quizId)) {
-    return res.status(400).json({
-      success: false,
-      message: "Quiz ID must be alphanumeric",
-    });
-  }
-
   try {
-    // Find student by UID (assuming uid field exists in your Student model)
-    const student = await Student.findOne({studentId: uid });
-    console.log(student)
+    const student = await Student.findOne({ studentId: uid });
     if (!student) {
       return res.status(401).json({
         success: false,
@@ -86,9 +79,7 @@ export const loginStudent = async (req, res) => {
       });
     }
 
-    // Compare passwords
     const isMatch = await bcrypt.compare(password, student.password);
-    console.log(isMatch)
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -96,27 +87,25 @@ export const loginStudent = async (req, res) => {
       });
     }
 
-    // Generate JWT token
-    const token = generateToken(student._id,quizId);
+    // Generate token with extra info
+    const token = generateToken(student);
 
-    // Set token as HTTP-only cookie
+    // Send cookie with student info
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       sameSite: "lax",
     });
 
-    // Remove password before sending student data
     student.password = undefined;
 
-    // Optionally include quizId in response if needed
     res.status(200).json({
       success: true,
       message: "Student logged in successfully",
       data: {
         student,
-        quizId,  // Return quizId back if needed on frontend
+        quizId,
       },
     });
   } catch (error) {
@@ -309,5 +298,46 @@ export const getStudentByStudentID = async (req, res) => {
     res.json({ success: true, message: "Student fetched successfully", data: student });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+// import jwt from "jsonwebtoken";
+// import Student from "../models/Student.js";
+
+// @desc    Get logged-in student details
+// @route   GET /api/student/me
+// @access  Private
+export const getStudentMe = async (req, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      return res.status(401).json({ success: false, message: "No token provided" });
+    }
+
+    // Decode token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Fetch from DB to ensure student still exists
+    const student = await Student.findById(decoded.id).select("-password");
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    // Return both DB info + token payload
+    res.json({
+      success: true,
+      student: {
+        id: student._id,
+        name: student.name,
+        studentId: student.studentId,
+        department: student.department,
+        year: student.year,
+        email: student.email,
+        phone: student.phone,
+      },
+      tokenData: decoded, // directly what was signed in token
+    });
+  } catch (err) {
+    console.error("Error in getStudentMe:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };

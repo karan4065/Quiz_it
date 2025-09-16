@@ -1,29 +1,33 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login"; // Correct path
-import Quiz from "./pages/student/Quiz"; // Make sure the path is correct
-import ThankYou from "./pages/student/ThankYou"; // Make sure the path is correct
-import FacultyDashboard from "./pages/faculty/FacultyDashboard"; // Import your faculty dashboard
-import StudentResult from "./pages/faculty/StudentResult"; // Import the StudentResult component
-import StudentDetails from "./pages/student/StudentDetails"; // Import StudentDetails
+import Login from "./pages/Login";
+import Quiz from "./pages/student/Quiz";
+import ThankYou from "./pages/student/ThankYou";
+import FacultyDashboard from "./pages/faculty/FacultyDashboard";
+import StudentResult from "./pages/faculty/StudentResult";
+import StudentDetails from "./pages/student/StudentDetails";
 import StudentLogin from "./pages/StudentLogin";
 import Home from "./pages/Home";
+import QuizResults from "./pages/faculty/QuizResults"; // ✅ Import QuizResults
 
 const App = () => {
-    return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/student-login" element={<StudentLogin />} />
-                <Route path="/faculty-login" element={<Login />} />
-                <Route path="/student-details" element={<StudentDetails />} /> {/* Add route for Student Details */}
-                <Route path="/quiz/:quizId" element={<Quiz />} />
-                <Route path="/thank-you" element={<ThankYou />} />
-                <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
-                <Route path="/student-result" element={<StudentResult />} />
-            </Routes>
-        </Router>
-    );
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/student-login" element={<StudentLogin />} />
+        <Route path="/faculty-login" element={<Login />} />
+        <Route path="/student-details" element={<StudentDetails />} />
+        <Route path="/quiz/:quizId" element={<Quiz />} />
+        <Route path="/thank-you" element={<ThankYou />} />
+        <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
+        <Route path="/student-result" element={<StudentResult />} />
+
+        {/* ✅ Route for viewing quiz results by faculty */}
+        <Route path="/quiz-results/:quizId" element={<QuizResults />} />
+      </Routes>
+    </Router>
+  );
 };
 
 export default App;

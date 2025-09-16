@@ -61,6 +61,19 @@ const createQuiz = async (req, res) => {
     }
 };
 
+export const getQuizSubmissions = async (req, res) => {
+  const { quizId } = req.params;
+
+  try {
+    const submissions = await QuizSubmission.find({ quizId })
+      .populate("studentId", "name studentId");
+console.log(submissions)
+    res.status(200).json({ success: true, data: submissions });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 // Get a specific quiz by ID
 const getQuiz = async (req, res) => {
     const { quizId } = req.params;

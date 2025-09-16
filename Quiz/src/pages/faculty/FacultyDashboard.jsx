@@ -4,10 +4,12 @@ import axios from "axios";
 import Navbar from "../../components/Navbar";
 import CreateQuiz from "./CreateQuiz";
 import Addstudent from "./Addstudent";
+
 const FacultyDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-    const facultyDetails = location.state?.facultyDetails;
+  const facultyDetails = location.state?.facultyDetails;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -57,21 +59,36 @@ const FacultyDashboard = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  
   return (
     <div className="flex bg-white min-h-screen">
       {/* Sidebar */}
       {sidebarOpen && (
         <aside className="h-screen w-1/5 bg-[#1e254a] text-white p-6 shadow-xl flex flex-col justify-between fixed z-20">
           <div>
-            <h2 className="text-xl font-bold mb-6 border-b pb-2 border-gray-400">Faculty Profile</h2>
+            <h2 className="text-xl font-bold mb-6 border-b pb-2 border-gray-400">
+              Faculty Profile
+            </h2>
             <div className="space-y-3 text-sm bg-[#2e3561] p-4 rounded-xl shadow-inner">
-              <div><span className="font-semibold">Name:</span> {facultyDetails.name}</div>
-              <div><span className="font-semibold">Email:</span> {facultyDetails.email}</div>
-              <div><span className="font-semibold">UID:</span> {facultyDetails.uid}</div>
-              <div><span className="font-semibold">Department:</span> {facultyDetails.department}</div>
-              <div><span className="font-semibold">Joined On:</span> {new Date(facultyDetails.createdAt).toLocaleDateString()}</div>
-              <div><span className="font-semibold">Last Update:</span> {new Date(facultyDetails.updatedAt).toLocaleDateString()}</div>
+              <div>
+                <span className="font-semibold">Name:</span> {facultyDetails.name}
+              </div>
+              <div>
+                <span className="font-semibold">Email:</span> {facultyDetails.email}
+              </div>
+              <div>
+                <span className="font-semibold">UID:</span> {facultyDetails.uid}
+              </div>
+              <div>
+                <span className="font-semibold">Department:</span> {facultyDetails.department}
+              </div>
+              <div>
+                <span className="font-semibold">Joined On:</span>{" "}
+                {new Date(facultyDetails.createdAt).toLocaleDateString()}
+              </div>
+              <div>
+                <span className="font-semibold">Last Update:</span>{" "}
+                {new Date(facultyDetails.updatedAt).toLocaleDateString()}
+              </div>
             </div>
           </div>
 
@@ -85,8 +102,15 @@ const FacultyDashboard = () => {
       )}
 
       {/* Main Content */}
-      <div className={`flex-grow transition-all duration-300 ${sidebarOpen ? "ml-[20%]" : ""}`}>
-        <Navbar userName={`Hey, ${facultyDetails.name}`} onProfileClick={toggleSidebar} />
+      <div
+        className={`flex-grow transition-all duration-300 ${
+          sidebarOpen ? "ml-[20%]" : ""
+        }`}
+      >
+        <Navbar
+          userName={`Hey, ${facultyDetails.name}`}
+          onProfileClick={toggleSidebar}
+        />
 
         <main className="p-8">
           {!selectedStudent ? (
@@ -106,20 +130,20 @@ const FacultyDashboard = () => {
 
               {!selectedClass && (
                 <div className="mt-6">
-                  <CreateQuiz />
-               
-                 <Addstudent/>
+                  {/* 👇 key={location.key} forces reload on navigate */}
+                  <CreateQuiz
+                    key={location.key}
+                    facultyDetails={facultyDetails}
+                  />
+                  <Addstudent />
                 </div>
               )}
-              <div>
-             
-              </div>
 
               {selectedClass && (
                 <>
-                  <h3 className="text-lg font-semibold mt-6">{selectedClass} Year Students</h3>
-
-                 
+                  <h3 className="text-lg font-semibold mt-6">
+                    {selectedClass} Year Students
+                  </h3>
 
                   {/* Search Students */}
                   <input
@@ -136,7 +160,9 @@ const FacultyDashboard = () => {
                       <tr className="bg-gray-100">
                         <th className="border border-gray-300 p-3">Sr. No</th>
                         <th className="border border-gray-300 p-3">UID</th>
-                        <th className="border border-gray-300 p-3">Student Name</th>
+                        <th className="border border-gray-300 p-3">
+                          Student Name
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -147,14 +173,23 @@ const FacultyDashboard = () => {
                             onClick={() => handleStudentClick(student)}
                             className="cursor-pointer hover:bg-gray-200 transition-colors"
                           >
-                            <td className="border border-gray-300 p-3 text-center">{index + 1}</td>
-                            <td className="border border-gray-300 p-3 text-center">{student.studentId}</td>
-                            <td className="border border-gray-300 p-3 text-center">{student.name}</td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              {index + 1}
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              {student.studentId}
+                            </td>
+                            <td className="border border-gray-300 p-3 text-center">
+                              {student.name}
+                            </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="3" className="text-center border border-gray-300 p-3">
+                          <td
+                            colSpan="3"
+                            className="text-center border border-gray-300 p-3"
+                          >
                             No students found.
                           </td>
                         </tr>

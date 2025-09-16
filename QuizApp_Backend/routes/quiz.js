@@ -5,12 +5,17 @@ import {
     getQuizAnswerDistribution, 
     getCategoryWiseAnswerDistribution,
     getCategoryWiseAnswerDistributionForStudent, 
-    createQuizByFaculty
+    createQuizByFaculty,getQuizSubmissions
 } from '../controllers/quizController.js';
 import { submitQuiz } from '../controllers/quizSubmissionController.js';
 // import { protect } from '../middlewares/user_middleware.js';
 import protect2  from '../middlewares/user_middleware.js';
 const router = express.Router();
+
+
+
+router.get("/:quizId/submissions", getQuizSubmissions);
+
 
 // Route to create a quiz
 router.post('/create', createQuiz);

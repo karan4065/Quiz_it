@@ -1,10 +1,34 @@
 import jwt from 'jsonwebtoken';
 import Faculty from '../models/Faculty.js';
-
+import Quiz from '../models/Quiz.js';
+import QuizSubmission from '../models/QuizSubmission.js'
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, 'divyansh', {
       expiresIn: '30d', // Token expiry (30 days)
   });
+};
+// ------------------ Get Quizzes by Faculty ------------------
+// ------------------ Get Quizzes by Faculty ------------------
+
+// ------------------ Get Quizzes by Faculty ------------------
+
+export const getQuizzesByFaculty = async (req, res) => {
+  try {
+    console.log(req.params)
+    const { facultyId } = req.params;
+
+    // Use 'createdBy' as per your schema
+    const quizzes = await Quiz.find({ createdBy: facultyId }).populate("createdBy", "name");
+
+    if (!quizzes.length) {
+      return res.status(404).json({ success: false, message: "No quizzes found" });
+    }
+
+    res.status(200).json({ success: true, data: quizzes });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 };
 
 export const registerFaculty = async (req, res) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../../components/Navbar"; // adjust path as needed
 
@@ -12,15 +12,17 @@ const Quiz = () => {
   const [answers, setAnswers] = useState([]);
   const [isProfileVisible, setIsProfileVisible] = useState(false);
 
+  const { quizId } = useParams(); // ✅ get quizId from URL params
   const navigate = useNavigate();
   const location = useLocation();
   const student = location.state?.student;
 
+  // Load quiz questions
   const loadQuiz = async () => {
     try {
       const { data } = await axios.get(
-        "http://localhost:5000/api/quizzes/68c3f4a8d8f5cf7b2c9dbc40",
-        { withCredentials: true } // ensure cookies are sent
+        `http://localhost:5000/api/quizzes/${quizId}`,
+        { withCredentials: true } // ✅ include cookies
       );
       if (data.success) setCategories(data.data.categories || []);
     } catch (err) {
@@ -29,8 +31,10 @@ const Quiz = () => {
   };
 
   useEffect(() => {
-    loadQuiz();
-  }, []);
+    if (quizId) {
+      loadQuiz();
+    }
+  }, [quizId]);
 
   const questions = categories.flatMap((cat) => cat.questions);
 
@@ -47,22 +51,29 @@ const Quiz = () => {
     return () => clearInterval(timer);
   }, [timeLeft, quizCompleted]);
 
+  // Handle option selection
   const handleOptionClick = (option) => {
     const updated = [...answers];
     const qId = questions[currentQuestionIndex]?._id;
     const index = updated.findIndex((ans) => ans.questionId === qId);
-    if (index !== -1) updated[index].selectedOption = option;
-    else updated.push({ questionId: qId, selectedOption: option });
+
+    if (index !== -1) {
+      updated[index].selectedOption = option;
+    } else {
+      updated.push({ questionId: qId, selectedOption: option });
+    }
+
     setAnswers(updated);
     setSelectedOption(option);
   };
 
+  // Handle quiz submission
   const handleSubmit = async () => {
     try {
       await axios.post(
-        "http://localhost:5000/api/quizzes/68c3f4a8d8f5cf7b2c9dbc40/submit",
+        `http://localhost:5000/api/quizzes/${quizId}/submit`,
         { answers },
-        { withCredentials: true } // ✅ token cookie will be sent automatically
+        { withCredentials: true }
       );
       navigate("/thank-you");
     } catch (err) {
@@ -70,6 +81,7 @@ const Quiz = () => {
     }
   };
 
+  // Keep selected answer highlighted
   useEffect(() => {
     const currQ = questions[currentQuestionIndex];
     const ans = answers.find((a) => a.questionId === currQ?._id);

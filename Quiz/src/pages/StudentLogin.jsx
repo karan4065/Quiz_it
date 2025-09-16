@@ -1,16 +1,48 @@
-// StudentLogin.js
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import quizImg from "./stu_login.jpg";
 
 const StudentLogin = () => {
   const [uid, setUid] = useState("");
   const [password, setPassword] = useState("");
   const [quizId, setQuizId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
-  const handleSubmit = (e) => {
+
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Student Login Data:", { uid, password, quizId });
-    alert(`UID: ${uid}\nPassword: ${password}\nQuiz ID: ${quizId}`);
+    setLoading(true);
+    setError(null);
+    setSuccessMsg(null);
+
+    try {
+      // ✅ axios needs withCredentials = true to send/receive cookies
+      const response = await axios.post(
+        "http://localhost:5000/api/student/login",
+        { uid, password, quizId },
+        { withCredentials: true }
+      );
+
+      setSuccessMsg("Login successful!");
+      console.log("Login response:", response.data);
+      setQuizId(response.data.quizId);
+      // ✅ Navigate to quiz page after login
+      navigate(`/quiz/${quizId}`);
+    } catch (err) {
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("Login failed. Please try again.");
+      }
+      console.error("Login error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -36,10 +68,7 @@ const StudentLogin = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* UID Field */}
               <div>
-                <label
-                  className="block text-sm font-semibold text-gray-700 mb-1"
-                  htmlFor="uid"
-                >
+                <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="uid">
                   UID
                 </label>
                 <input
@@ -55,10 +84,7 @@ const StudentLogin = () => {
 
               {/* Password Field */}
               <div>
-                <label
-                  className="block text-sm font-semibold text-gray-700 mb-1"
-                  htmlFor="password"
-                >
+                <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="password">
                   Password
                 </label>
                 <input
@@ -74,10 +100,7 @@ const StudentLogin = () => {
 
               {/* Quiz ID Field */}
               <div>
-                <label
-                  className="block text-sm font-semibold text-gray-700 mb-1"
-                  htmlFor="quizId"
-                >
+                <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="quizId">
                   Quiz ID
                 </label>
                 <input
@@ -91,12 +114,19 @@ const StudentLogin = () => {
                 />
               </div>
 
+              {/* Error Message */}
+              {error && <p className="text-red-600 text-sm font-semibold">{error}</p>}
+
+              {/* Success Message */}
+              {successMsg && <p className="text-green-600 text-sm font-semibold">{successMsg}</p>}
+
               {/* Submit Button */}
               <button
                 type="submit"
                 className="w-full bg-[#243185] text-white font-semibold py-3 rounded-lg shadow-md hover:bg-[#cd354d] transition duration-300"
+                disabled={loading}
               >
-                Login
+                {loading ? "Logging in..." : "Login"}
               </button>
             </form>
           </div>
@@ -104,11 +134,7 @@ const StudentLogin = () => {
 
         {/* Right Side - Image */}
         <div className="w-1/2 flex items-center justify-center">
-          <img
-            src={quizImg}
-            alt="Quiz Illustration"
-            className="w-[600px] h-[600px] object-cover "
-          />
+          <img src={quizImg} alt="Quiz Illustration" className="w-[600px] h-[600px] object-cover " />
         </div>
       </div>
     </div>

@@ -2,8 +2,8 @@ import Student from '../models/Student.js';
 import jwt from 'jsonwebtoken';
 import Papa from 'papaparse';
 // Generate a JWT token
-const generateToken = (userId) => {
-    return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+const generateToken = (userId,quizId) => {
+    return jwt.sign({ id: userId,quizId:quizId }, process.env.JWT_SECRET, {
         expiresIn: '30d', // Token expiry (30 days)
     });
 };
@@ -54,48 +54,81 @@ export const registerStudent = async (req, res) => {
 };
 
 export const loginStudent = async (req, res) => {
-    const { email, password } = req.body;
+  console.log("Login request body:", req.body);
 
-    try {
-        const student = await Student.findOne({ email });
+  const { uid, password, quizId } = req.body;
 
-        if (!student) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
-            });
-        }
-        const isMatch = await bcrypt.compare(password, student.password);
+  // Validate presence
+  if (!uid || !password || !quizId) {
+    return res.status(400).json({
+      success: false,
+      message: "UID, password, and quizId are required",
+    });
+  }
 
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid email or password'
-            });
-        }
+  // Validate quizId is alphanumeric
+  const alphaNumRegex = /^[a-zA-Z0-9]+$/;
+  if (!alphaNumRegex.test(quizId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Quiz ID must be alphanumeric",
+    });
+  }
 
-        const token = generateToken(student._id);
-        res.cookie('token', token, {
-            httpOnly: true, // Helps prevent XSS attacks
-            secure: process.env.NODE_ENV === 'production', // Set secure to true in production
-            maxAge: 24 * 60 * 60 * 1000, // 1 days
-        });
-
-        student.password = undefined;
-
-        res.json({
-            success: true,
-            message: 'Student logged in successfully',
-            data: student
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Server error',
-            error: error.message
-        });
+  try {
+    // Find student by UID (assuming uid field exists in your Student model)
+    const student = await Student.findOne({studentId: uid });
+    console.log(student)
+    if (!student) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid UID or password",
+      });
     }
+
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, student.password);
+    console.log(isMatch)
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid UID or password",
+      });
+    }
+
+    // Generate JWT token
+    const token = generateToken(student._id,quizId);
+
+    // Set token as HTTP-only cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      sameSite: "lax",
+    });
+
+    // Remove password before sending student data
+    student.password = undefined;
+
+    // Optionally include quizId in response if needed
+    res.status(200).json({
+      success: true,
+      message: "Student logged in successfully",
+      data: {
+        student,
+        quizId,  // Return quizId back if needed on frontend
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
 };
+
 
 export const getYearDeptStudents = async (req, res) => {
     try {

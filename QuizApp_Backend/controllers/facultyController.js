@@ -7,17 +7,12 @@ const generateToken = (userId) => {
       expiresIn: '30d', // Token expiry (30 days)
   });
 };
-// ------------------ Get Quizzes by Faculty ------------------
-// ------------------ Get Quizzes by Faculty ------------------
-
-// ------------------ Get Quizzes by Faculty ------------------
 
 export const getQuizzesByFaculty = async (req, res) => {
   try {
     console.log(req.params)
     const { facultyId } = req.params;
 
-    // Use 'createdBy' as per your schema
     const quizzes = await Quiz.find({ createdBy: facultyId }).populate("createdBy", "name");
 
     if (!quizzes.length) {

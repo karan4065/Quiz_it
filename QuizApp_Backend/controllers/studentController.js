@@ -37,7 +37,7 @@ export const registerStudent = async (req, res) => {
             year,
             email,
             phone,
-            password:name
+            password:studentId
         });
 
         // Save the student to the database
@@ -339,5 +339,84 @@ export const getStudentMe = async (req, res) => {
   } catch (err) {
     console.error("Error in getStudentMe:", err);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+import Quiz from '../models/Quiz.js';
+import QuizSubmission from '../models/QuizSubmission.js';
+export const getStudentQuizzes = async (req, res) => {
+  const { studentId } = req.params;
+
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    const submissions = await QuizSubmission.find({ studentId })
+      .populate('quizId', 'title description questions') // select quiz fields you want
+      .sort({ submittedAt: -1 })
+      .exec();
+    console.log("karan")
+    return res.json({ success: true, data: submissions });
+  } catch (err) {
+    console.error('Error fetching student quizzes:', err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getStudentQuizResult = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+
+    // Fetch submission with student + quiz populated
+    const submission = await QuizSubmission.findById(submissionId)
+      .populate("studentId", "name email") // student basic info
+      .populate({
+        path: "quizId",
+        select: "title questions", // get quiz title + questions
+      });
+
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: "Submission not found",
+      });
+    }
+
+    // Calculate score (if quiz has correctAnswer field in each question)
+    let score = 0;
+    const detailedAnswers = submission.answers.map((ans) => {
+      const question = submission.quizId.questions.find(
+        (q) => q._id.toString() === ans.questionId.toString()
+      );
+
+      const isCorrect =
+        question && question.correctAnswer === ans.selectedOption;
+
+      if (isCorrect) score++;
+
+      return {
+        question: question ? question.text : "Unknown Question",
+        selectedOption: ans.selectedOption,
+        correctAnswer: question ? question.correctAnswer : "N/A",
+        isCorrect,
+      };
+    });
+console.log("divyanh")
+    res.json({
+      success: true,
+      student: submission.studentId,
+      quizTitle: submission.quizId.title,
+      submittedAt: submission.submittedAt,
+      totalQuestions: submission.quizId.questions.length,
+      score,
+      answers: detailedAnswers,
+    });
+  } catch (error) {
+    console.error("Error fetching quiz result:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 };

@@ -1,8 +1,10 @@
 import Student from '../models/Student.js';
 import jwt from 'jsonwebtoken';
 import Papa from 'papaparse';
+import QuizSubmission from '../models/QuizSubmission.js';
 // Generate a JWT token
 const generateToken = (student) => {
+  console.log( process.env.JWT_SECRET)
   return jwt.sign(
     {
       id: student._id,
@@ -10,7 +12,7 @@ const generateToken = (student) => {
       studentId: student.studentId,
       department: student.department,
     },
-    process.env.JWT_SECRET,
+   'divyansh',
     { expiresIn: "30d" }
   );
 };
@@ -72,6 +74,7 @@ export const loginStudent = async (req, res) => {
 
   try {
     const student = await Student.findOne({ studentId: uid });
+   
     if (!student) {
       return res.status(401).json({
         success: false,
@@ -80,6 +83,7 @@ export const loginStudent = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, student.password);
+    console.log(isMatch)
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -98,7 +102,7 @@ export const loginStudent = async (req, res) => {
       sameSite: "lax",
     });
 
-    student.password = undefined;
+    // student.password = undefined;
 
     res.status(200).json({
       success: true,
@@ -314,7 +318,7 @@ export const getStudentMe = async (req, res) => {
     }
 
     // Decode token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, "divyansh");
 
     // Fetch from DB to ensure student still exists
     const student = await Student.findById(decoded.id).select("-password");
@@ -342,7 +346,26 @@ export const getStudentMe = async (req, res) => {
   }
 };
 import Quiz from '../models/Quiz.js';
-import QuizSubmission from '../models/QuizSubmission.js';
+export const getStudentByName = async (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name) return res.status(400).json({ success: false, message: "Name is required" });
+
+    const student = await Student.findOne({ name });
+    if (!student) return res.status(404).json({ success: false, message: "Student not found" });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        department: student.department,
+        year: student.year,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 export const getStudentQuizzes = async (req, res) => {
   const { studentId } = req.params;
 
@@ -364,59 +387,82 @@ export const getStudentQuizzes = async (req, res) => {
   }
 };
 
-export const getStudentQuizResult = async (req, res) => {
+export const getQuizResult = async (req, res) => {
   try {
     const { submissionId } = req.params;
 
-    // Fetch submission with student + quiz populated
-    const submission = await QuizSubmission.findById(submissionId)
-      .populate("studentId", "name email") // student basic info
-      .populate({
-        path: "quizId",
-        select: "title questions", // get quiz title + questions
-      });
-
+    // Find submission
+    const submission = await QuizSubmission.findById(submissionId);
     if (!submission) {
-      return res.status(404).json({
-        success: false,
-        message: "Submission not found",
-      });
+      return res.status(404).json({ success: false, message: "Submission not found" });
     }
 
-    // Calculate score (if quiz has correctAnswer field in each question)
+    // Find quiz
+    const quiz = await Quiz.findById(submission.quizId);
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+
+    // Flatten questions across categories
+    const allQuestions = quiz.categories.flatMap((cat) => cat.questions);
+
     let score = 0;
-    const detailedAnswers = submission.answers.map((ans) => {
-      const question = submission.quizId.questions.find(
-        (q) => q._id.toString() === ans.questionId.toString()
-      );
+    const totalQuestions = allQuestions.length;
 
-      const isCorrect =
-        question && question.correctAnswer === ans.selectedOption;
-
-      if (isCorrect) score++;
-
-      return {
-        question: question ? question.text : "Unknown Question",
-        selectedOption: ans.selectedOption,
-        correctAnswer: question ? question.correctAnswer : "N/A",
-        isCorrect,
-      };
+    // Section-wise breakdown
+    const sections = quiz.categories.map((cat) => {
+      let secScore = 0;
+      cat.questions.forEach((q) => {
+        const ans = submission.answers.find(
+          (a) => a.questionId.toString() === q._id.toString()
+        );
+        if (ans) {
+          if (ans.selectedOption === "Maybe") secScore += 0.5;
+          else if (ans.selectedOption === q.correctAnswer) secScore += 1;
+        }
+      });
+      score += secScore;
+      return { name: cat.name, score: secScore, total: cat.questions.length };
     });
-console.log("divyanh")
-    res.json({
+
+    return res.json({
       success: true,
-      student: submission.studentId,
-      quizTitle: submission.quizId.title,
-      submittedAt: submission.submittedAt,
-      totalQuestions: submission.quizId.questions.length,
-      score,
-      answers: detailedAnswers,
+      data: {
+        quiz: { title: quiz.title },
+        score,
+        totalQuestions,
+        sections,
+        submittedAt: submission.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error("Error in getQuizResult:", err.message);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+export const getStudentSubmissions = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if student exists
+    const student = await Student.findById(id);
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    // Fetch submissions by studentId
+    const submissions = await QuizSubmission.find({ studentId: id })
+      .populate("quizId", "title totalMarks createdAt") // populate quiz details
+      .sort({ createdAt: -1 });
+console.log(submissions)
+    res.status(200).json({
+      success: true,
+      count: submissions.length,
+      submissions,
     });
   } catch (error) {
-    console.error("Error fetching quiz result:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    console.error("Error fetching student submissions:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };

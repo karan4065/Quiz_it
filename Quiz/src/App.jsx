@@ -9,7 +9,7 @@ import StudentDetails from "./pages/student/StudentDetails";
 import StudentLogin from "./pages/StudentLogin";
 import Home from "./pages/Home";
 import QuizResults from "./pages/faculty/QuizResults"; // ✅ Import QuizResults
-import StStudentQuizResult from "./pages/faculty/StStudentQuizResult";
+import StStudentQuizResult from "./pages/student/StStudentQuizResult";
 const App = () => {
   return (
     <Router>
@@ -22,10 +22,10 @@ const App = () => {
         <Route path="/thank-you" element={<ThankYou />} />
         <Route path="/faculty-dashboard" element={<FacultyDashboard />} />
         <Route path="/student-result" element={<StudentResult />} />
-
+<Route path="/result" element={<StStudentQuizResult/>}/>
         {/* ✅ Route for viewing quiz results by faculty */}
         <Route path="/quiz-results/:quizId" element={<QuizResults />} />
-        <Route path="/student-quiz-result" element={<StStudentQuizResult/>}></Route>
+
       </Routes>
     </Router>
   );

@@ -56,7 +56,7 @@ export const loginFaculty = async (req, res) => {
        const user = await Faculty.findOne({ email });
 
         if (user && await user.password==password) {
-          user.password = undefined;
+          // user.password = undefined;
             const token = generateToken(user._id);
 
             res.cookie('token', token, {

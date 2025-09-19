@@ -8,20 +8,20 @@ import {
   uploadStudentsCSV,
   updateStudent,
   deleteStudent,
-  getStudentMe,getStudentQuizzes,getStudentQuizResult
+  getStudentMe,getStudentQuizzes,getQuizResult,getStudentSubmissions,getStudentByName
 } from '../controllers/studentController.js';
 import { protect } from '../middlewares/authMiddleware.js'; // Auth middleware to protect routes
 
 const router = express.Router();
-
+router.get("/result/:submissionId", getQuizResult);
 router.post('/register', registerStudent);
-
+router.get("/submissions/:id",getStudentSubmissions )
 router.post('/login', loginStudent);
 router.get("/me",getStudentMe);
 router.get('/studentId/:studentId', getStudentByStudentID );
 
 router.get('/', getYearDeptStudents);
-router.get("/quiz-result/:submissionId", getStudentQuizResult);
+router.get("/info", getStudentByName);
 router.post('/upload-csv', uploadStudentsCSV);
 router.delete("/:id", deleteStudent);
 // UPDATE / DELETE

@@ -11,7 +11,7 @@ export const protect = async (req, res, next) => {
 
     if (token) {
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, "divyansh");
             
             // const user = await User.findById(decoded.id).select('-password');
             // if(user.role == "teacher"){

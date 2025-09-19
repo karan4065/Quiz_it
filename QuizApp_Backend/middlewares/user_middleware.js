@@ -11,7 +11,7 @@ const protect2 = async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, "divyansh");
 
     // Attach student info to req.user
     req.user = await Student.findById(decoded.id).select("-password");

@@ -1,4 +1,3 @@
-// routes/userRoutes.js
 import express from 'express';
 import {
   registerStudent,
@@ -8,26 +7,44 @@ import {
   uploadStudentsCSV,
   updateStudent,
   deleteStudent,
-  getStudentMe,getStudentQuizzes,getQuizResult,getStudentSubmissions,getStudentByName
+  getStudentMe,
+  getStudentQuizzes,
+  getQuizResult,
+  getStudentSubmissions,
+  getStudentByName
 } from '../controllers/studentController.js';
-import { protect } from '../middlewares/authMiddleware.js'; // Auth middleware to protect routes
-import { getCategoryWiseAnswerDistribution } from '../controllers/quizController.js';
+
+import { protect } from '../middlewares/authMiddleware.js'; // protect routes if needed
+import { getCategoryWiseAnswerDistributionForStudent } from '../controllers/quizController.js';
 
 const router = express.Router();
-router.get("/result/:submissionId", getCategoryWiseAnswerDistribution);
-router.post('/register', registerStudent);
-router.get("/submissions/:id",getStudentSubmissions )
-router.post('/login', loginStudent);
-router.get("/me",getStudentMe);
-router.get('/studentId/:studentId', getStudentByStudentID );
 
+// Student registration and login
+router.post('/register', registerStudent);
+router.post('/login', loginStudent);
+
+// Student profile & info routes
+router.get('/me', protect, getStudentMe);
+router.get('/studentId/:studentId', getStudentByStudentID);
+router.get('/id/:id', getStudentByStudentID);
+router.get('/info', getStudentByName);
+
+// Student list filtered by year and department
 router.get('/', getYearDeptStudents);
-router.get("/info", getStudentByName);
+
+// Upload student CSV data
 router.post('/upload-csv', uploadStudentsCSV);
-router.delete("/:id", deleteStudent);
-// UPDATE / DELETE
+
+// Update and delete student records
 router.put('/:studentId', updateStudent);
-router.get('/id/:id',getStudentByStudentID)
+router.delete('/:id', deleteStudent);
 router.delete('/delete/:studentId', deleteStudent);
+
+// Get quizzes and submissions for a student
 router.get('/:studentId/quizzes', getStudentQuizzes);
+router.get('/submissions/:id', getStudentSubmissions);
+
+// Route for fetching category-wise answer distribution for a student's quiz submission
+router.post('/result/:submissionId', getCategoryWiseAnswerDistributionForStudent);
+
 export default router;

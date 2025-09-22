@@ -9,6 +9,7 @@ const StStudentQuizResult = () => {
   const navigate = useNavigate();
   const { student, submissionId } = location.state || {};
 
+  const [categories, setCategories] = useState([]);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +32,9 @@ const StStudentQuizResult = () => {
 
         if (response.data.success) {
           console.log("Result API Response:", response.data);
-          setResult(response.data.data);
+          // Assuming the main quiz result is elsewhere or you just want categories here:
+          setCategories(response.data.data); // <-- categories array here
+          setResult(response.data.data); // Optional: store full result if needed
         } else {
           console.error("Failed to fetch result:", response.data.message);
         }
@@ -50,86 +53,104 @@ const StStudentQuizResult = () => {
 
   if (loading) return <div className="text-center">Loading...</div>;
 
-  if (!result) {
+  if (!categories || categories.length === 0) {
     return (
       <div className="text-center text-red-600">
-        Could not load quiz result.
+        Could not load quiz result or no categories available.
       </div>
     );
   }
-
-  const percentage =
-    result.totalQuestions > 0
-      ? Math.round((result.score / result.totalQuestions) * 100)
-      : 0;
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-10 space-y-8">
       {/* Quiz & Student Details */}
       <section className="bg-[#f8fafc] p-6 rounded-lg shadow-sm border">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">
-          {result.quiz?.title || "Quiz Result"}
+          {student.name}'s Quiz Result
         </h2>
         <p className="text-gray-700">
-          <strong>Student:</strong> {student.name} ({student.studentId})
+          <strong>Student ID:</strong> {student.studentId}
         </p>
-        <p className="text-gray-700">
-          <strong>Submitted At:</strong>{" "}
-          {new Date(result.submittedAt).toLocaleString()}
-        </p>
-      </section>
-
-      {/* Overall Score */}
-      <section className="flex flex-col items-center space-y-4">
-        <CircularProgressBar percentage={percentage} />
-        <p className="text-lg font-semibold text-gray-700">
-          Score: {result.score} / {result.totalQuestions}
-        </p>
+        {/* You can add other details if you have */}
       </section>
 
       {/* Category-wise Distribution */}
-      {result.sections && result.sections.length > 0 && (
-        <section className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
-            Category-wise Distribution
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {result.sections.map((sec, idx) => {
-              // calculate Yes / No / Maybe percentages
-              const total = sec.total || 1;
-              const yesPercent = Math.round((sec.yes || 0) / total * 100);
-              const noPercent = Math.round((sec.no || 0) / total * 100);
-              const maybePercent = Math.round((sec.maybe || 0) / total * 100);
+      <section className="space-y-6">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+          Category-wise Answer Distribution
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {categories.map((cat, idx) => (
+            <div
+              key={cat._id || idx}
+              className="p-6 border rounded-lg shadow-sm bg-gray-50 flex flex-col items-center"
+            >
+              <h4 className="text-lg font-bold text-gray-700 mb-4">
+                {cat.category}
+              </h4>
 
-              return (
-                <div
-                  key={idx}
-                  className="p-4 border rounded-lg shadow-sm bg-gray-50 flex flex-col items-center"
-                >
-                  <h4 className="font-bold text-gray-700 mb-2">{sec.name}</h4>
-                  <div className="flex space-x-6 mt-4">
-                    <div className="flex flex-col items-center">
-                      <CircularProgressBar percentage={yesPercent} color="#22c55e" />
-                      <span className="mt-2 text-sm font-medium">Yes</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <CircularProgressBar percentage={noPercent} color="#ef4444" />
-                      <span className="mt-2 text-sm font-medium">No</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <CircularProgressBar percentage={maybePercent} color="#facc15" />
-                      <span className="mt-2 text-sm font-medium">Maybe</span>
-                    </div>
+              <div className="flex flex-col space-y-6 w-full max-w-sm">
+                {/* Yes */}
+                <div className="flex items-center space-x-4">
+                  <CircularProgressBar
+                    percentage={cat.answers.Yes?.percentage || 0}
+                    color="#22c55e"
+                    size={70}
+                    strokeWidth={6}
+                  />
+                  <div>
+                    <p className="text-green-600 font-semibold text-lg">Yes</p>
+                    <p className="text-gray-700">
+                      Count: {cat.answers.Yes?.count || 0}
+                    </p>
+                    <p className="text-gray-500">
+                      {cat.answers.Yes?.percentage?.toFixed(2) || 0}%
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    {sec.score} / {total} correct
-                  </p>
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+
+                {/* No */}
+                <div className="flex items-center space-x-4">
+                  <CircularProgressBar
+                    percentage={cat.answers.No?.percentage || 0}
+                    color="#ef4444"
+                    size={70}
+                    strokeWidth={6}
+                  />
+                  <div>
+                    <p className="text-red-600 font-semibold text-lg">No</p>
+                    <p className="text-gray-700">
+                      Count: {cat.answers.No?.count || 0}
+                    </p>
+                    <p className="text-gray-500">
+                      {cat.answers.No?.percentage?.toFixed(2) || 0}%
+                    </p>
+                  </div>
+                </div>
+
+                {/* Maybe */}
+                <div className="flex items-center space-x-4">
+                  <CircularProgressBar
+                    percentage={cat.answers.Maybe?.percentage || 0}
+                    color="#facc15"
+                    size={70}
+                    strokeWidth={6}
+                  />
+                  <div>
+                    <p className="text-yellow-500 font-semibold text-lg">Maybe</p>
+                    <p className="text-gray-700">
+                      Count: {cat.answers.Maybe?.count || 0}
+                    </p>
+                    <p className="text-gray-500">
+                      {cat.answers.Maybe?.percentage?.toFixed(2) || 0}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Back Button */}
       <div className="flex justify-center mt-8">

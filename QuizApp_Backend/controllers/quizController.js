@@ -295,7 +295,7 @@ const getCategoryWiseAnswerDistribution = async (req, res) => {
                 }
             }
         ]);
-
+console.log(results)
         res.json({
             success: true,
             message: "Category-wise answer distribution fetched successfully",

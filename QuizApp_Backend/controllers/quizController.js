@@ -4,6 +4,203 @@ import QuizSubmission from '../models/QuizSubmission.js';
 import Student from '../models/Student.js';
 import Papa from 'papaparse'
 
+const getCategoryWiseAnswerDistributionForStudent = async (req, res) => {
+  const { submissionId } = req.params;
+  const { studentId } = req.body;
+  
+
+  try {
+    const results = await QuizSubmission.aggregate([
+      // 1️⃣ Match this submission for this student
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(submissionId),
+          studentId: new mongoose.Types.ObjectId(studentId)
+        }
+      },
+
+      // 2️⃣ Break answers into individual docs
+      { $unwind: "$answers" },
+
+      // 3️⃣ Lookup quiz details to get categories/questions
+      {
+        $lookup: {
+          from: "quizzes",
+          localField: "quizId",
+          foreignField: "_id",
+          as: "quizDetails"
+        }
+      },
+      { $unwind: "$quizDetails" },
+      { $unwind: "$quizDetails.categories" },
+      { $unwind: "$quizDetails.categories.questions" },
+
+      // 4️⃣ Match answers with the corresponding question
+      {
+        $match: {
+          $expr: {
+            $eq: ["$quizDetails.categories.questions._id", "$answers.questionId"]
+          }
+        }
+      },
+
+      // 5️⃣ Group answers by category + selectedOption (Yes/No/Maybe)
+      {
+        $group: {
+          _id: {
+            category: "$quizDetails.categories.category",
+            selectedOption: "$answers.selectedOption"
+          },
+          count: { $sum: 1 }
+        }
+      },
+
+      // 6️⃣ Re-group by category → collect all options
+      {
+        $group: {
+          _id: "$_id.category",
+          options: {
+            $push: {
+              option: "$_id.selectedOption",
+              count: "$count"
+            }
+          },
+          total: { $sum: "$count" }
+        }
+      },
+
+      // 7️⃣ Format: category + Yes/No/Maybe counts + %
+      {
+        $project: {
+          category: "$_id",
+          answers: {
+            $arrayToObject: {
+              $map: {
+                input: "$options",
+                as: "opt",
+                in: {
+                  k: "$$opt.option", // Yes/No/Maybe
+                  v: {
+                    count: "$$opt.count",
+                    percentage: {
+                      $round: [
+                        {
+                          $multiply: [
+                            { $divide: ["$$opt.count", "$total"] },
+                            100
+                          ]
+                        },
+                        2
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          _id: 0
+        }
+      }
+    ]);
+console.log(results)
+    res.json({
+      success: true,
+      message:
+        "Category-wise Yes/No/Maybe distribution for student fetched successfully",
+      data: results
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+// const getCategoryWiseAnswerDistributionForStudent = async (req, res) => {
+// console.log(req.params)
+// console.log(req.body)
+//     const {submissionId } = req.params;
+// const{ studentId}=req.body
+
+//     try {
+//         const results = await QuizSubmission.aggregate([
+//             { $match: { quizId: new mongoose.Types.ObjectId(submissionId), studentId: new mongoose.Types.ObjectId(studentId) } },
+//             { $unwind: '$answers' },
+//             {
+//                 $lookup: {
+//                     from: 'quizzes',
+//                     localField: 'quizId',
+//                     foreignField: '_id',
+//                     as: 'quizDetails'
+//                 }
+//             },
+//             { $unwind: '$quizDetails' },
+//             { $unwind: '$quizDetails.categories' }, // Unwinding categories to match them correctly
+//             { $unwind: '$quizDetails.categories.questions' }, // Unwind questions inside categories
+//             {
+//                 $match: {
+//                     $expr: { $eq: ['$quizDetails.categories.questions._id', '$answers.questionId'] }
+//                 }
+//             },
+//             {
+//                 $group: {
+//                     _id: {
+//                         category: '$quizDetails.categories.category',
+//                         selectedOption: '$answers.selectedOption'
+//                     },
+//                     count: { $sum: 1 }
+//                 }
+//             },
+//             {
+//                 $group: {
+//                     _id: '$_id.category',
+//                     options: { $push: { option: '$_id.selectedOption', count: '$count' } },
+//                     total: { $sum: '$count' }
+//                 }
+//             },
+//             {
+//                 $project: {
+//                     category: '$_id',
+//                     answers: {
+//                         $arrayToObject: {
+//                             $map: {
+//                                 input: '$options',
+//                                 as: 'opt',
+//                                 in: {
+//                                     k: '$$opt.option',
+//                                     v: {
+//                                         count: '$$opt.count',
+//                                         percentage: {
+//                                             $multiply: [
+//                                                 { $divide: ['$$opt.count', '$total'] },
+//                                                 100
+//                                             ]
+//                                         }
+//                                     }
+//                                 }
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         ]);
+
+//         res.json({ 
+//             success: true, 
+//             message: "Category-wise answer distribution for student fetched successfully", 
+//             data: results 
+//         });
+//     } catch (error) {
+//         res.status(500).json({
+//             success: false,
+//             message: "Server error",
+//             error: error.message
+//         });
+//     }
+// };
+
 // Create a new quiz
 const createQuiz = async (req, res) => {
     try {
@@ -311,85 +508,6 @@ const getCategoryWiseAnswerDistribution = async (req, res) => {
 };
 
 // New function to get category-wise answer distribution for a student
-const getCategoryWiseAnswerDistributionForStudent = async (req, res) => {
-    const { quizId, studentId } = req.params;
-
-    try {
-        const results = await QuizSubmission.aggregate([
-            { $match: { quizId: new mongoose.Types.ObjectId(quizId), studentId: new mongoose.Types.ObjectId(studentId) } },
-            { $unwind: '$answers' },
-            {
-                $lookup: {
-                    from: 'quizzes',
-                    localField: 'quizId',
-                    foreignField: '_id',
-                    as: 'quizDetails'
-                }
-            },
-            { $unwind: '$quizDetails' },
-            { $unwind: '$quizDetails.categories' }, // Unwinding categories to match them correctly
-            { $unwind: '$quizDetails.categories.questions' }, // Unwind questions inside categories
-            {
-                $match: {
-                    $expr: { $eq: ['$quizDetails.categories.questions._id', '$answers.questionId'] }
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        category: '$quizDetails.categories.category',
-                        selectedOption: '$answers.selectedOption'
-                    },
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $group: {
-                    _id: '$_id.category',
-                    options: { $push: { option: '$_id.selectedOption', count: '$count' } },
-                    total: { $sum: '$count' }
-                }
-            },
-            {
-                $project: {
-                    category: '$_id',
-                    answers: {
-                        $arrayToObject: {
-                            $map: {
-                                input: '$options',
-                                as: 'opt',
-                                in: {
-                                    k: '$$opt.option',
-                                    v: {
-                                        count: '$$opt.count',
-                                        percentage: {
-                                            $multiply: [
-                                                { $divide: ['$$opt.count', '$total'] },
-                                                100
-                                            ]
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        ]);
-
-        res.json({ 
-            success: true, 
-            message: "Category-wise answer distribution for student fetched successfully", 
-            data: results 
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Server error",
-            error: error.message
-        });
-    }
-};
 
 
 // Export all functions

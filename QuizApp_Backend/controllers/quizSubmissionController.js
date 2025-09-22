@@ -85,7 +85,7 @@ export const submitQuiz = async (req, res) => {
 };
 export const getCategoryDistribution = async (req, res) => {
   const { quizId, studentId } = req.params;
-
+console.log(req.params)
   try {
  
     // Find quiz with questions to get categories

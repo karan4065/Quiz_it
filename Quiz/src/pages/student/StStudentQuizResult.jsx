@@ -1,20 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaDownload } from "react-icons/fa";
 import axios from "axios";
 import CircularProgressBar from "../faculty/CircularProgressBar";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const StStudentQuizResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { student, submissionId } = location.state || {};
+  const pdfRef = useRef();
+
+  const { submissionId, student } = location.state || {};
+  const studentId = student?._id;
+  const rollNo = student?.studentId;
 
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  if (!student || !submissionId) {
+  if (!submissionId || !studentId) {
     return (
-      <div className="text-center text-red-600">
+      <div className="text-center text-red-600 mt-10">
         Missing required data. Please go back.
       </div>
     );
@@ -24,8 +30,9 @@ const StStudentQuizResult = () => {
     const fetchResult = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(
+        const response = await axios.post(
           `http://localhost:5000/api/student/result/${submissionId}`,
+          { studentId },
           { withCredentials: true }
         );
 
@@ -46,100 +53,159 @@ const StStudentQuizResult = () => {
     };
 
     fetchResult();
-  }, [submissionId]);
+  }, [submissionId, studentId]);
 
-  if (loading) return <div className="text-center">Loading...</div>;
-
-  if (!result) {
+  if (loading) return <div className="text-center mt-10">Loading...</div>;
+  if (!result || result.length === 0)
     return (
-      <div className="text-center text-red-600">
+      <div className="text-center text-red-600 mt-10">
         Could not load quiz result.
       </div>
     );
-  }
 
-  const percentage =
-    result.totalQuestions > 0
-      ? Math.round((result.score / result.totalQuestions) * 100)
-      : 0;
+  // Calculate overall score
+  let totalQuestions = 0;
+  let totalCorrect = 0;
+
+  result.forEach((category) => {
+    const answers = category.answers || {};
+    totalCorrect += answers.Yes?.count || 0;
+    totalQuestions +=
+      (answers.Yes?.count || 0) +
+      (answers.No?.count || 0) +
+      (answers.Maybe?.count || 0);
+  });
+
+  const overallPercentage =
+    totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+
+  // fixed keys (always show these circles)
+  const fixedKeys = ["Yes", "No", "Maybe"];
+
+  // color map for answers
+  const colorMap = {
+    Yes: "#22c55e",
+    No: "#ef4444",
+    Maybe: "#facc15",
+  };
+
+  // PDF download
+  const handleDownloadPDF = async () => {
+    const input = pdfRef.current;
+    const canvas = await html2canvas(input, { scale: 2 });
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+    }
+
+    pdf.save(`${student?.name || "student"}-quiz-result.pdf`);
+  };
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-10 space-y-8">
-      {/* Quiz & Student Details */}
-      <section className="bg-[#f8fafc] p-6 rounded-lg shadow-sm border">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">
-          {result.quiz?.title || "Quiz Result"}
-        </h2>
-        <p className="text-gray-700">
-          <strong>Student:</strong> {student.name} ({student.studentId})
-        </p>
-        <p className="text-gray-700">
-          <strong>Submitted At:</strong>{" "}
-          {new Date(result.submittedAt).toLocaleString()}
-        </p>
-      </section>
+    <div className="max-w-5xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-10 space-y-10">
+      <div className="flex justify-between items-center">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition"
+        >
+          <FaArrowLeft className="mr-2" />
+          Back
+        </button>
 
-      {/* Overall Score */}
-      <section className="flex flex-col items-center space-y-4">
-        <CircularProgressBar percentage={percentage} />
-        <p className="text-lg font-semibold text-gray-700">
-          Score: {result.score} / {result.totalQuestions}
-        </p>
-      </section>
+        <button
+          onClick={handleDownloadPDF}
+          className="flex items-center py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        >
+          <FaDownload className="mr-2" />
+          Download PDF
+        </button>
+      </div>
 
-      {/* Category-wise Distribution */}
-      {result.sections && result.sections.length > 0 && (
-        <section className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+      <div ref={pdfRef} className="space-y-10">
+        {/* Quiz & Student Details */}
+        <section className="bg-gray-50 p-6 rounded-lg shadow-sm border">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            {location.state?.quizTitle || "Quiz Result"}
+          </h2>
+          <div className="space-y-1 text-gray-700">
+            <p>
+              <strong>Student:</strong> {student?.name} ({rollNo})
+            </p>
+            <p>
+              <strong>Department:</strong> {student?.department} |{" "}
+              <strong>Year:</strong> {student?.year}
+            </p>
+            <p>
+              <strong>Email:</strong> {student?.email}
+            </p>
+            <p>
+              <strong>Updated At:</strong>{" "}
+              {new Date(student?.updatedAt || location.state?.updatedAt).toLocaleString()}
+            </p>
+          </div>
+        </section>
+
+        {/* Overall Score */}
+        <section className="flex flex-col items-center space-y-4">
+          <CircularProgressBar percentage={overallPercentage} size={100} />
+          <p className="text-lg font-semibold text-gray-700">
+            Score: {totalCorrect} / {totalQuestions}
+          </p>
+        </section>
+
+        {/* Category-wise Distribution */}
+        <section>
+          <h3 className="text-xl font-semibold text-gray-800 mb-6">
             Category-wise Distribution
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {result.sections.map((sec, idx) => {
-              // calculate Yes / No / Maybe percentages
-              const total = sec.total || 1;
-              const yesPercent = Math.round((sec.yes || 0) / total * 100);
-              const noPercent = Math.round((sec.no || 0) / total * 100);
-              const maybePercent = Math.round((sec.maybe || 0) / total * 100);
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {result.map((category, idx) => {
+              const answers = category.answers || {};
               return (
                 <div
                   key={idx}
-                  className="p-4 border rounded-lg shadow-sm bg-gray-50 flex flex-col items-center"
+                  className="p-6 border rounded-lg shadow-sm bg-gray-50 flex flex-col items-center"
                 >
-                  <h4 className="font-bold text-gray-700 mb-2">{sec.name}</h4>
-                  <div className="flex space-x-6 mt-4">
-                    <div className="flex flex-col items-center">
-                      <CircularProgressBar percentage={yesPercent} color="#22c55e" />
-                      <span className="mt-2 text-sm font-medium">Yes</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <CircularProgressBar percentage={noPercent} color="#ef4444" />
-                      <span className="mt-2 text-sm font-medium">No</span>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <CircularProgressBar percentage={maybePercent} color="#facc15" />
-                      <span className="mt-2 text-sm font-medium">Maybe</span>
-                    </div>
+                  <h4 className="font-bold text-gray-700 mb-6 text-lg">
+                    {category.category}
+                  </h4>
+
+                  <div className="flex justify-center flex-wrap gap-10">
+                    {fixedKeys.map((key) => (
+                      <div key={key} className="flex flex-col items-center">
+                        <CircularProgressBar
+                          percentage={answers[key]?.percentage || 0}
+                          color={colorMap[key]}
+                          size={70}
+                        />
+                        <span className="mt-2 text-sm font-medium text-gray-700">
+                          {key}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    {sec.score} / {total} correct
-                  </p>
                 </div>
               );
             })}
           </div>
         </section>
-      )}
-
-      {/* Back Button */}
-      <div className="flex justify-center mt-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center py-3 px-6 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition ease-in-out"
-        >
-          <FaArrowLeft className="mr-2" />
-          Back
-        </button>
       </div>
     </div>
   );

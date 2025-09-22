@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../../components/Navbar";
 import CreateQuiz from "./CreateQuiz";
-import Addstudent from "./Addstudent";
+import Addstudent from './Addstudent'
 
 const FacultyDashboard = () => {
   const location = useLocation();

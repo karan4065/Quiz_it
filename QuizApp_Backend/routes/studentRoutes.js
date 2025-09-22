@@ -1,5 +1,6 @@
 // routes/userRoutes.js
 import express from 'express';
+import {getCategoryWiseAnswerDistributionForStudent} from '../controllers/quizController.js'
 import {
   registerStudent,
   loginStudent,
@@ -10,10 +11,12 @@ import {
   deleteStudent,
   getStudentMe,getStudentQuizzes,getQuizResult,getStudentSubmissions,getStudentByName
 } from '../controllers/studentController.js';
+
 import { protect } from '../middlewares/authMiddleware.js'; // Auth middleware to protect routes
+import { getCategoryDistribution } from '../controllers/quizSubmissionController.js';
 
 const router = express.Router();
-router.get("/result/:submissionId", getQuizResult);
+router.post("/result/:submissionId",getCategoryWiseAnswerDistributionForStudent);
 router.post('/register', registerStudent);
 router.get("/submissions/:id",getStudentSubmissions )
 router.post('/login', loginStudent);

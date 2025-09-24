@@ -4,25 +4,27 @@ import {
     getQuiz, 
     getQuizAnswerDistribution, 
     getCategoryWiseAnswerDistribution,
-    getCategoryWiseAnswerDistributionForStudent,
+    getCategoryWiseAnswerDistributionForStudent,saveProgress,
     createQuizByFaculty,getQuizSubmissions
 } from '../controllers/quizController.js';
 import { getCategoryDistribution } from '../controllers/quizSubmissionController.js';
 import { submitQuiz } from '../controllers/quizSubmissionController.js';
 // import { protect } from '../middlewares/user_middleware.js';
 import protect2  from '../middlewares/user_middleware.js';
+import { isAuthenticated } from '../middlewares/authMiddleware2.js';
 const router = express.Router();
 
 
 
 router.get("/:quizId/submissions", getQuizSubmissions);
-
+// Save progress for a quiz
+router.post("/:quizId/save-progress", isAuthenticated, saveProgress);
 router.get('/quizzes/:quizId/student/:studentId/category-distribution', getCategoryDistribution);
 // Route to create a quiz
 router.post('/create', createQuiz);
 
 // Get a specific quiz by ID
-router.get('/:quizId', getQuiz);
+router.get('/:quizId',isAuthenticated, getQuiz);
 
 // Submit a quiz
 router.post('/:quizId/submit', protect2, submitQuiz);

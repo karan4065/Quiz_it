@@ -21,7 +21,7 @@ const StudentLogin = () => {
     setSuccessMsg(null);
 
     try {
-      // ✅ axios needs withCredentials = true to send/receive cookies
+
       const response = await axios.post(
         "http://localhost:5000/api/student/login",
         { uid, password, quizId },
@@ -31,7 +31,7 @@ const StudentLogin = () => {
       setSuccessMsg("Login successful!");
       console.log("Login response:", response.data);
       setQuizId(response.data.quizId);
-      // ✅ Navigate to quiz page after login
+
       navigate(`/quiz/${quizId}`);
     } catch (err) {
       if (err.response?.data?.message) {

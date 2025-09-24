@@ -3,7 +3,7 @@ import Quiz from "../models/Quiz.js";
 import QuizSubmission from '../models/QuizSubmission.js';
 import Student from '../models/Student.js';
 import Papa from 'papaparse'
-
+import QuizProgress from '../models/QuizProgress.js';
 // Create a new quiz
 const createQuiz = async (req, res) => {
     try {
@@ -60,7 +60,20 @@ const createQuiz = async (req, res) => {
         });
     }
 };
+export const deleteInactiveProgress = async () => {
+  try {
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
+    const result = await QuizProgress.deleteMany({
+      completed: false,
+      updatedAt: { $lt: thirtyMinutesAgo },
+    });
+
+    console.log(`Deleted ${result.deletedCount} inactive quiz progress entries`);
+  } catch (err) {
+    console.error("Error deleting inactive progress:", err);
+  }
+};
 export const getQuizSubmissions = async (req, res) => {
   const { quizId } = req.params;
 
@@ -74,23 +87,55 @@ console.log(submissions)
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-// Get a specific quiz by ID
+// Get a specific quiz by ID along with student's progress
 const getQuiz = async (req, res) => {
     const { quizId } = req.params;
+    const studentId = req.user?._id; // Ensure authentication middleware sets req.user
+
+    if (!studentId) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized: Student not logged in"
+        });
+    }
+
     try {
+        // Fetch the quiz
         const quiz = await Quiz.findById(quizId).populate('createdBy', 'name');
         if (!quiz) {
             return res.status(404).json({
                 success: false,
-                message: "Quiz not found!"
+                message: "Quiz not found"
             });
         }
+
+        // Fetch existing progress for this student & quiz
+        let progress = await QuizProgress.findOne({ student: studentId, quiz: quizId });
+
+        // If no progress exists, create a new one
+        if (!progress) {
+            progress = await QuizProgress.create({
+                student: studentId,
+                quiz: quizId,
+                currentQuestionIndex: 0,
+                answers: [],
+                timeLeft: 15 * 60, // default 15 minutes
+                completed: false
+            });
+        }
+
+        // Send response with quiz and progress
         res.json({
             success: true,
-            message: "Quiz fetched successfully.",
-            data: quiz
+            message: "Quiz fetched successfully",
+            data: {
+                quiz,
+                progress
+            }
         });
+
     } catch (error) {
+        console.error("Get quiz error:", error);
         res.status(500).json({
             success: false,
             message: "Server error",
@@ -426,8 +471,28 @@ console.log(results)
 };
 
 // New function to get category-wise answer distribution for a student
+ const saveProgress = async (req, res) => {
+  try {
+    const studentId = req.user._id;
+    const { quizId } = req.params;
+    const { currentQuestionIndex, answers, timeLeft } = req.body;
 
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) return res.status(404).json({ success: false, message: "Quiz not found" });
 
+    const progress = await QuizProgress.findOneAndUpdate(
+      { student: studentId, quiz: quizId },
+      { currentQuestionIndex, answers, timeLeft },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    return res.status(200).json({ success: true, message: "Progress saved", progress });
+
+  } catch (error) {
+    console.error("Save progress error:", error);
+    return res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
 // Export all functions
 export { 
     createQuiz, 
@@ -435,5 +500,5 @@ export {
     getQuizAnswerDistribution, 
     getCategoryWiseAnswerDistribution, 
     getCategoryWiseAnswerDistributionForStudent,
-    createQuizByFaculty
+    createQuizByFaculty,saveProgress
 };

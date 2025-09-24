@@ -15,10 +15,10 @@ const Navbar = ({ userName, onProfileClick }) => {
   });
 
   return (
-    <nav className="flex justify-between items-center px-6 py-3 bg-[#313970] text-white shadow-md">
+    <nav className="flex justify-between items-center px-6 py-3 bg-slate-200 text-slate-800 shadow-md">
       {/* Left: Logo and College Info */}
       <div className="flex items-center space-x-3">
-        <img src={logo} alt="College Logo" className="h-10 w-10 object-contain" />
+        <img src={logo} alt="College Logo" className="h-12 w-12 object-contain" />
         <h1 className="text-lg font-semibold max-w-[300px] md:max-w-full truncate">
           St. Vincent Pallotti College of Engineering and Technology, Nagpur
         </h1>

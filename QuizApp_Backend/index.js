@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-
+import { deleteInactiveProgress } from './controllers/quizController.js';
 dotenv.config();
 console.log("JWT_SECRET from env:", process.env.JWT_SECRET);
 const app = express();
@@ -16,7 +16,9 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.json());
-
+setInterval(() => {
+  deleteInactiveProgress();
+}, 5 * 60 * 1000);
 // CORS configuration
 const corsOptions = {
     origin: ['http://localhost:3000', 'http://localhost:5173'],

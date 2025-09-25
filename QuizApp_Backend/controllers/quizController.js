@@ -144,6 +144,8 @@ const getQuiz = async (req, res) => {
     }
 };
 
+
+
 const createQuizByFaculty = async (req, res) => {
   try {
     const { title, facultyId, csvData } = req.body;
@@ -493,6 +495,25 @@ console.log(results)
     return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+// Delete a quiz by ID (with cascade delete)
+const deleteQuiz = async (req, res) => {
+  try {
+    console.log("Deleting quiz with ID:", req.params.quizId);  
+    const quiz = await Quiz.findByIdAndDelete(req.params.quizId);
+    if (!quiz) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+
+    res.json({ success: true, message: "Quiz deleted successfully" });
+
+  } catch (err) {
+    console.error("Delete error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
 // Export all functions
 export { 
     createQuiz, 
@@ -500,5 +521,6 @@ export {
     getQuizAnswerDistribution, 
     getCategoryWiseAnswerDistribution, 
     getCategoryWiseAnswerDistributionForStudent,
-    createQuizByFaculty,saveProgress
+    createQuizByFaculty,saveProgress,
+    deleteQuiz
 };

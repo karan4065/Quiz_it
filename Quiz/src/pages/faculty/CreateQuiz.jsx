@@ -7,7 +7,7 @@ const CreateQuiz = ({ facultyDetails }) => {
   const [quizTitle, setQuizTitle] = useState("");
   const [quizzes, setQuizzes] = useState([]);
   const [showQuizTable, setShowQuizTable] = useState(false);
-  const navigate = useNavigate(); // ✅ for navigation
+  const navigate = useNavigate();
 
   // Fetch quizzes
   const fetchQuizzes = async () => {
@@ -58,9 +58,30 @@ const CreateQuiz = ({ facultyDetails }) => {
     reader.readAsText(quizFile);
   };
 
-  // ✅ Navigate to Quiz Results page
   const handleViewResults = (quiz) => {
     navigate(`/quiz-results/${quiz._id}`, { state: { quiz, facultyDetails } });
+  };
+
+
+  const handleDeleteQuiz = async (quizId) => {
+    try {
+  
+      const res = await axios.delete(
+        `http://localhost:5000/api/quizzes/${quizId}`
+      );
+      if(res.data){
+        alert("Quiz delete Successfully")
+      }
+      if (res.data.success) {
+        setQuizzes((prev) => prev.filter((quiz) => quiz._id !== quizId));
+      } else {
+        alert("Failed to delete quiz");
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting quiz");
+    }
   };
 
   return (
@@ -77,15 +98,35 @@ const CreateQuiz = ({ facultyDetails }) => {
         />
 
         <div className="flex items-center space-x-2">
-          <input type="file" accept=".csv" onChange={handleFileChange} className="border p-2 rounded-md" />
-          <button onClick={handleQuizUpload} className="bg-blue-500 text-white px-4 py-2 rounded">Submit</button>
-          <button onClick={fetchQuizzes} className="bg-green-500 text-white px-4 py-2 rounded">Get My Quizzes</button>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="border p-2 rounded-md"
+          />
+          <button
+            onClick={handleQuizUpload}
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Submit
+          </button>
+          <button
+            onClick={fetchQuizzes}
+            className="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            Get My Quizzes
+          </button>
         </div>
       </div>
 
       {showQuizTable && quizzes.length > 0 && (
         <div className="mt-6 p-4 border rounded-lg shadow-md bg-white relative">
-          <button onClick={() => setShowQuizTable(false)} className="absolute top-2 right-2 text-red-500 font-bold">✕</button>
+          <button
+            onClick={() => setShowQuizTable(false)}
+            className="absolute top-2 right-2 text-red-500 font-bold"
+          >
+            ✕
+          </button>
 
           <h4 className="text-md font-medium mb-3">All My Quizzes</h4>
           <table className="min-w-full border text-sm">
@@ -102,13 +143,21 @@ const CreateQuiz = ({ facultyDetails }) => {
                 <tr key={quiz._id} className="text-center">
                   <td className="border px-4 py-2">{quiz._id}</td>
                   <td className="border px-4 py-2">{quiz.title}</td>
-                  <td className="border px-4 py-2">{facultyDetails?.name || "Unknown"}</td>
                   <td className="border px-4 py-2">
+                    {facultyDetails?.name || "Unknown"}
+                  </td>
+                  <td className="border px-4 py-2 flex justify-center space-x-2">
                     <button
                       onClick={() => handleViewResults(quiz)}
                       className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
                     >
                       View Results
+                    </button>
+                    <button
+                      onClick={() => handleDeleteQuiz(quiz._id)}
+                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>

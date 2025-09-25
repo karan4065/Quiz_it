@@ -1,6 +1,7 @@
 import express from 'express';
 import { 
     createQuiz, 
+    deleteQuiz,
     getQuiz, 
     getQuizAnswerDistribution, 
     getCategoryWiseAnswerDistribution,
@@ -25,6 +26,8 @@ router.post('/create', createQuiz);
 
 // Get a specific quiz by ID
 router.get('/:quizId',isAuthenticated, getQuiz);
+router.delete('/:quizId', deleteQuiz);
+
 
 // Submit a quiz
 router.post('/:quizId/submit', protect2, submitQuiz);
